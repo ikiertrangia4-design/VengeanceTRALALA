@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vengeance SMP — Mace PvP Test</title>
+<style>
+  :root{
+    --bg:#050d08; --bg2:#0a1a10; --card:#0d2216; --line:#1c4a2c;
+    --green:#22e06b; --green2:#14b052; --glow:rgba(34,224,107,.35);
+    --text:#e6fff0; --muted:#8db89c; --bad:#ff5a5a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+    background:radial-gradient(1200px 700px at 20% -10%,#0f3a21 0%,transparent 60%),
+               radial-gradient(900px 600px at 100% 110%,#0b2e1a 0%,transparent 55%),var(--bg);
+    color:var(--text);overflow-x:hidden;
+  }
+  /* floating particles */
+  .particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+  .particles span{position:absolute;bottom:-20px;width:8px;height:8px;background:var(--green);opacity:.25;
+    animation:rise linear infinite;box-shadow:0 0 12px var(--glow)}
+  @keyframes rise{to{transform:translateY(-110vh) rotate(180deg);opacity:0}}
+
+  header{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;
+    padding:18px 32px;border-bottom:1px solid var(--line);background:rgba(5,13,8,.7);backdrop-filter:blur(8px)}
+  .logo{font-weight:900;letter-spacing:2px;font-size:20px;color:var(--green);text-shadow:0 0 18px var(--glow)}
+  .logo small{color:var(--muted);font-weight:600;letter-spacing:1px;margin-left:6px}
+  .userbox{display:none;align-items:center;gap:12px}
+  .userbox img{width:34px;height:34px;image-rendering:pixelated;border-radius:6px;border:1px solid var(--green)}
+  .userbox b{color:var(--green)}
+
+  main{position:relative;z-index:1;min-height:calc(100% - 70px);display:flex;align-items:center;justify-content:center;padding:32px 16px}
+  .view{display:none;width:100%;max-width:560px;animation:in .55s cubic-bezier(.2,.8,.2,1)}
+  .view.active{display:block}
+  @keyframes in{from{opacity:0;transform:translateY(24px) scale(.98)}to{opacity:1;transform:none}}
+  .view.out{animation:out .25s ease forwards}
+  @keyframes out{to{opacity:0;transform:translateY(-16px) scale(.98)}}
+
+  .card{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);
+    border-radius:18px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 40px rgba(34,224,107,.06)}
+  h1{font-size:28px;margin-bottom:6px}
+  h1 span{color:var(--green)}
+  .sub{color:var(--muted);margin-bottom:24px;font-size:14px}
+
+  label{display:block;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+  .row{display:flex;align-items:center;gap:12px}
+  .row .field{flex:1}
+  input{width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:#07160d;color:var(--text);
+    font-size:15px;outline:none;transition:.25s}
+  input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--glow)}
+  .head{width:52px;height:52px;border-radius:10px;border:1px solid var(--line);background:#07160d;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none;
+    opacity:0;transform:translateX(-14px) scale(.7);transition:.4s cubic-bezier(.3,1.5,.5,1)}
+  .head.show{opacity:1;transform:none;border-color:var(--green);box-shadow:0 0 18px var(--glow)}
+  .head img{width:100%;height:100%;image-rendering:pixelated;display:block}
+
+  button{cursor:pointer;font-family:inherit;border:none;transition:transform .15s,box-shadow .25s,background .25s}
+  .btn{width:100%;margin-top:22px;padding:14px;border-radius:12px;font-weight:800;font-size:15px;letter-spacing:1px;
+    background:linear-gradient(135deg,var(--green),var(--green2));color:#032010;box-shadow:0 8px 24px var(--glow)}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px var(--glow)}
+  .btn:active{transform:scale(.97)}
+  .btn.ghost{background:transparent;color:var(--green);border:1px solid var(--green);box-shadow:none}
+  .link{background:none;color:var(--green);font-size:14px;margin-top:16px;text-align:center;width:100%}
+  .link:hover{text-decoration:underline}
+  .err{color:var(--bad);font-size:13px;min-height:18px;margin-top:12px;text-align:center}
+
+  /* quiz */
+  .progress{height:8px;background:#07160d;border-radius:99px;overflow:hidden;border:1px solid var(--line);margin-bottom:8px}
+  .progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green2),var(--green));
+    box-shadow:0 0 14px var(--glow);transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-bottom:18px}
+  .q{font-size:20px;font-weight:700;margin-bottom:18px;line-height:1.35}
+  .opt{display:block;width:100%;text-align:left;padding:14px 16px;margin-bottom:10px;border-radius:12px;
+    background:#07160d;color:var(--text);border:1px solid var(--line);font-size:15px}
+  .opt:hover:not(:disabled){border-color:var(--green);transform:translateX(6px);background:#0b2316}
+  .opt.correct{background:rgba(34,224,107,.18);border-color:var(--green);animation:pop .4s}
+  .opt.wrong{background:rgba(255,90,90,.15);border-color:var(--bad);animation:shake .4s}
+  @keyframes pop{50%{transform:scale(1.03)}}
+  @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .explain{margin-top:6px;padding:12px 14px;border-left:3px solid var(--green);background:rgba(34,224,107,.07);
+    border-radius:6px;font-size:14px;color:var(--muted);display:none;animation:in .4s}
+
+  .result{text-align:center}
+  .score{font-size:72px;font-weight:900;color:var(--green);text-shadow:0 0 30px var(--glow);margin:8px 0}
+  .rank{display:inline-block;padding:6px 16px;border:1px solid var(--green);border-radius:99px;color:var(--green);font-weight:700;margin-bottom:12px}
+  .result img{width:96px;height:96px;image-rendering:pixelated;border-radius:14px;border:2px solid var(--green);box-shadow:0 0 28px var(--glow);margin-bottom:10px}
+  .tier{margin:10px auto 6px;padding:14px 18px;border-radius:14px;border:1px solid var(--green);
+    background:rgba(34,224,107,.08);box-shadow:0 0 30px var(--glow);animation:pop .6s .2s both}
+  .tier .t{font-size:34px;font-weight:900;color:var(--green);text-shadow:0 0 22px var(--glow);letter-spacing:2px}
+  .tier .d{font-size:13px;color:var(--muted);margin-top:4px}
+  .nm{display:inline-block;margin:6px 0 4px;color:var(--green);font-size:13px;text-decoration:none;border-bottom:1px dashed var(--green)}
+  .nm:hover{text-shadow:0 0 12px var(--glow)}
+  .toast{position:fixed;left:50%;bottom:32px;transform:translate(-50%,40px);opacity:0;z-index:10;
+    background:var(--card);border:1px solid var(--green);color:var(--text);padding:12px 20px;border-radius:12px;
+    box-shadow:0 10px 40px rgba(0,0,0,.6),0 0 24px var(--glow);transition:.4s cubic-bezier(.2,.8,.2,1);pointer-events:none}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast b{color:var(--green)}
+
+  /* creator page */
+  #v-creator{max-width:720px}
+  .creator{position:relative;overflow:hidden;text-align:center}
+  .creator::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(320px circle at var(--mx,50%) var(--my,0%),rgba(34,224,107,.14),transparent 60%);transition:background .1s}
+  .badge{position:relative;width:96px;height:96px;margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:44px;font-weight:900;color:#032010;background:linear-gradient(135deg,var(--green),var(--green2));cursor:pointer;
+    box-shadow:0 0 40px var(--glow);animation:float 3s ease-in-out infinite;user-select:none}
+  .badge::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px dashed var(--green);opacity:.5;animation:spin 14s linear infinite}
+  .badge.spin{animation:badgespin .9s cubic-bezier(.2,.8,.2,1)}
+  @keyframes float{50%{transform:translateY(-8px)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes badgespin{to{transform:rotate(720deg) scale(1.15)}}
+  .roles{height:22px;color:var(--green);font-weight:700;letter-spacing:1px;margin-top:4px}
+  .caret{display:inline-block;width:2px;height:16px;background:var(--green);margin-left:3px;vertical-align:-3px;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .eq{display:flex;gap:4px;justify-content:center;align-items:flex-end;height:22px;margin:12px 0 0}
+  .eq i{width:5px;background:var(--green);border-radius:2px;animation:eq 1s ease-in-out infinite;box-shadow:0 0 8px var(--glow)}
+  .eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}.eq i:nth-child(4){animation-delay:.1s}.eq i:nth-child(5){animation-delay:.3s}
+  @keyframes eq{0%,100%{height:5px}50%{height:22px}}
+  .eq.muted i{animation-play-state:paused;height:5px;opacity:.4}
+
+  .stats{display:flex;gap:10px;margin:20px 0 6px}
+  .stat{flex:1;padding:12px 6px;border-radius:12px;background:#07160d;border:1px solid var(--line);transition:.3s;cursor:default}
+  .stat:hover{transform:translateY(-4px);border-color:var(--green);box-shadow:0 8px 24px var(--glow)}
+  .stat b{display:block;font-size:26px;color:var(--green);text-shadow:0 0 16px var(--glow)}
+  .stat span{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+
+  .tabs{display:flex;gap:6px;margin:20px 0 14px;padding:5px;border-radius:14px;background:#07160d;border:1px solid var(--line)}
+  .tab{flex:1;padding:10px 6px;border-radius:10px;background:transparent;color:var(--muted);font-weight:700;font-size:13px;letter-spacing:.5px}
+  .tab:hover{color:var(--text)}
+  .tab.active{background:linear-gradient(135deg,var(--green),var(--green2));color:#032010;box-shadow:0 4px 16px var(--glow)}
+  .panel{display:none;text-align:left}
+  .panel.active{display:block;animation:in .45s cubic-bezier(.2,.8,.2,1)}
+  .panel p.lead{color:var(--muted);line-height:1.65;font-size:14px;margin-bottom:14px}
+
+  .step{display:block;width:100%;text-align:left;margin-bottom:10px;padding:14px 16px;border-radius:12px;background:#07160d;
+    border:1px solid var(--line);color:var(--text);position:relative;padding-left:46px}
+  .step::before{content:attr(data-n);position:absolute;left:12px;top:12px;width:24px;height:24px;border-radius:50%;
+    background:var(--green);color:#032010;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
+  .step:hover{border-color:var(--green);transform:translateX(6px)}
+  .step b{font-size:15px}
+  .step .more{max-height:0;overflow:hidden;opacity:0;color:var(--muted);font-size:13px;line-height:1.55;transition:max-height .45s ease,opacity .35s,margin .35s}
+  .step.open{border-color:var(--green);background:#0b2316}
+  .step.open .more{max-height:120px;opacity:1;margin-top:8px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .chip{padding:9px 16px;border-radius:99px;background:#07160d;border:1px solid var(--line);color:var(--text);font-size:13px;font-weight:700}
+  .chip:hover{border-color:var(--green);transform:translateY(-3px)}
+  .chip.active{background:var(--green);color:#032010;box-shadow:0 0 20px var(--glow)}
+  .whybox{min-height:70px;padding:16px;border-radius:12px;border-left:3px solid var(--green);background:rgba(34,224,107,.07);
+    color:var(--text);font-size:14px;line-height:1.6}
+  .whybox.swap{animation:in .4s}
+
+  .goal{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin-bottom:10px;padding:14px 16px;border-radius:12px;
+    background:#07160d;border:1px solid var(--line);color:var(--text);font-size:14px}
+  .goal:hover{border-color:var(--green);transform:translateX(6px)}
+  .goal .box{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;
+    color:transparent;font-weight:900;transition:.3s}
+  .goal.done{background:rgba(34,224,107,.12);border-color:var(--green)}
+  .goal.done .box{background:var(--green);border-color:var(--green);color:#032010;transform:rotate(360deg) scale(1.1)}
+  .goal.done .txt{text-decoration:line-through;opacity:.7}
+  .gbar{height:8px;border-radius:99px;background:#07160d;border:1px solid var(--line);overflow:hidden;margin-top:6px}
+  .gbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green2),var(--green));box-shadow:0 0 14px var(--glow);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+  .gtxt{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
+
+  .actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+  .actions .btn{margin-top:0;flex:1;min-width:140px;padding:12px;font-size:13px}
+  .love{font-size:16px}
+  .vol{display:flex;align-items:center;gap:10px;margin-top:16px;color:var(--muted);font-size:12px;letter-spacing:1px;text-transform:uppercase}
+  input[type=range]{padding:0;border:none;background:transparent;accent-color:var(--green);height:24px;cursor:pointer}
+  input[type=range]:focus{box-shadow:none}
+
+  .sp{position:fixed;width:8px;height:8px;background:var(--green);border-radius:2px;pointer-events:none;z-index:60;
+    box-shadow:0 0 10px var(--glow);animation:sp .85s cubic-bezier(.2,.8,.2,1) forwards}
+  @keyframes sp{to{transform:translate(var(--dx),var(--dy)) rotate(260deg) scale(.2);opacity:0}}
+</style>
+</head>
+<body>
+<div class="particles" id="particles"></div>
+
+<header>
+  <div class="logo">VENGEANCE<small>SMP</small></div>
+  <div class="userbox" id="userbox">
+    <img id="uHead" alt="">
+    <span>Logged in as <b id="uName"></b></span>
+    <button class="btn ghost" style="width:auto;margin:0;padding:8px 16px" id="logoutBtn">Logout</button>
+  </div>
+</header>
+
+<main>
+  <!-- LOGIN -->
+  <section class="view active" id="v-login">
+    <div class="card">
+      <h1>Welcome <span>back</span></h1>
+      <p class="sub">Log in to take the Mace PvP test.</p>
+
+      <label>Minecraft username</label>
+      <div class="row">
+        <div class="field"><input id="lMc" placeholder="e.g. Notch" autocomplete="off" maxlength="16"></div>
+        <div class="head" id="lHead"><img alt=""></div>
+      </div>
+
+      <label>Password</label>
+      <input id="lPass" type="password" placeholder="••••••••">
+
+      <div class="err" id="lErr"></div>
+      <button class="btn" id="lBtn">LOGIN</button>
+      <button class="link" data-go="v-signup">No account? Create one</button>
+    </div>
+  </section>
+
+  <!-- SIGNUP -->
+  <section class="view" id="v-signup">
+    <div class="card">
+      <h1>Create <span>account</span></h1>
+      <p class="sub">Sign up with your Gmail to join the Vengeance SMP test.</p>
+
+      <label>Minecraft username</label>
+      <div class="row">
+        <div class="field"><input id="sMc" placeholder="e.g. Notch" autocomplete="off" maxlength="16"></div>
+        <div class="head" id="sHead"><img alt=""></div>
+      </div>
+
+      <label>Gmail</label>
+      <input id="sMail" type="email" placeholder="yourname@gmail.com">
+
+      <label>Password</label>
+      <input id="sPass" type="password" placeholder="At least 6 characters">
+
+      <div class="err" id="sErr"></div>
+      <button class="btn" id="sBtn">CREATE ACCOUNT</button>
+      <button class="link" data-go="v-login">Already have an account? Log in</button>
+    </div>
+  </section>
+
+  <!-- INTRO -->
+  <section class="view" id="v-intro">
+    <div class="card" style="text-align:center">
+      <h1>Mace <span>PvP</span> Test</h1>
+      <p class="sub">10 questions on mace combat: smash attacks, spear mace, wind charges, density, breach and more. Think you know your stuff?</p>
+      <button class="btn" id="startBtn">START TEST</button>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="view" id="v-quiz">
+    <div class="card">
+      <div class="progress"><i id="bar"></i></div>
+      <div class="qmeta"><span id="qNum"></span><span id="qScore"></span></div>
+      <div class="q" id="qText"></div>
+      <div id="opts"></div>
+      <div class="explain" id="explain"></div>
+      <button class="btn" id="nextBtn" style="display:none">NEXT</button>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section class="view" id="v-result">
+    <div class="card result">
+      <img id="rHead" alt="">
+      <h1 id="rName"></h1>
+      <a class="nm" id="rNm" target="_blank" rel="noopener">View skin on NameMC</a>
+      <div class="tier"><div class="t" id="rTier"></div><div class="d" id="rTierDesc"></div></div>
+      <div class="score" id="rScore"></div>
+      <p class="sub" id="rMsg"></p>
+      <button class="btn" id="playBtn">WANNA PLAY THE SERVER?</button>
+      <button class="btn ghost" id="creatorBtn">WANNA KNOW WHO MADE THIS?</button>
+      <button class="btn ghost" id="retryBtn">RETAKE TEST</button>
+    </div>
+  </section>
+
+  <!-- CREATOR -->
+  <section class="view" id="v-creator">
+    <div class="card creator" id="cCard">
+      <div class="badge" id="badge" title="Click me!">S</div>
+      <h1>Made by <span>Shirahoshi</span></h1>
+      <div class="roles"><span id="roleText"></span><i class="caret"></i></div>
+      <div class="eq" id="eq"><i></i><i></i><i></i><i></i><i></i></div>
+
+      <div class="stats">
+        <div class="stat"><b data-count="10">0</b><span>Questions</span></div>
+        <div class="stat"><b data-count="5">0</b><span>Tiers</span></div>
+        <div class="stat"><b data-count="1">0</b><span>Server</span></div>
+      </div>
+
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="p-story">How it was made</button>
+        <button class="tab" data-tab="p-why">Why</button>
+        <button class="tab" data-tab="p-goals">Goals</button>
+      </div>
+
+      <!-- ===== EDIT THE TEXT BELOW TO MATCH THE REAL STORY ===== -->
+      <div class="panel active" id="p-story">
+        <p class="lead">Tap each step to see how Shirahoshi built the site.</p>
+        <button class="step open" data-n="1"><b>Design</b><div class="more">A dark green theme with glowing accents, smooth animations and a sound on every click, so the site feels like part of the server.</div></button>
+        <button class="step" data-n="2"><b>Login and accounts</b><div class="more">Players sign up with their Gmail and Minecraft name, and their skin head pops up next to the username as they type.</div></button>
+        <button class="step" data-n="3"><b>The mace PvP test</b><div class="more">10 questions on smash attacks, wind charges, Density, Breach, spear + mace and more, each with a short explanation.</div></button>
+        <button class="step" data-n="4"><b>Tiers and joining</b><div class="more">Your score decides your tier, then one click copies the server IP so you can jump straight in.</div></button>
+      </div>
+
+      <div class="panel" id="p-why">
+        <p class="lead">Tap a reason to see why Shirahoshi made this.</p>
+        <div class="chips" id="chips">
+          <button class="chip active" data-text="Vengeance SMP is all about fair, skilled PvP. This test is a fun way to welcome new players and show who really knows mace combat.">Fair play</button>
+          <button class="chip" data-text="A place where every player feels welcome from their very first login, and the community grows together.">Community</button>
+          <button class="chip" data-text="Learning mace tricks should feel like a game, not homework, so the test comes with animations, sounds and ranks.">Fun</button>
+          <button class="chip" data-text="Players get a taste of the server's skill level before they even join, which builds hype for the SMP.">Hype</button>
+        </div>
+        <div class="whybox" id="whyBox">Vengeance SMP is all about fair, skilled PvP. This test is a fun way to welcome new players and show who really knows mace combat.</div>
+      </div>
+
+      <div class="panel" id="p-goals">
+        <p class="lead">Tap a goal to check it off and fill the bar.</p>
+        <button class="goal" data-i="0"><span class="box">&#10003;</span><span class="txt">Build the best mace PvP community on Minecraft</span></button>
+        <button class="goal" data-i="1"><span class="box">&#10003;</span><span class="txt">Give every player a fair tier based on real knowledge</span></button>
+        <button class="goal" data-i="2"><span class="box">&#10003;</span><span class="txt">Keep growing Vengeance SMP with new features</span></button>
+        <button class="goal" data-i="3"><span class="box">&#10003;</span><span class="txt">Make the server a place players are proud to be part of</span></button>
+        <div class="gbar"><i id="gBar"></i></div>
+        <div class="gtxt" id="gTxt">0 / 4 goals checked</div>
+      </div>
+      <!-- ===== END EDIT ===== -->
+
+      <div class="actions">
+        <button class="btn love" id="loveBtn">&#128154; <span id="loveN">0</span></button>
+        <button class="btn" id="ipBtn2">COPY SERVER IP</button>
+      </div>
+      <div class="vol"><span>Music</span><input type="range" id="vol" min="0" max="100" value="50"><button class="btn ghost" id="muteBtn" style="width:auto;margin:0;padding:8px 14px;font-size:12px">MUTE</button></div>
+      <button class="btn ghost" id="backBtn">BACK TO RESULTS</button>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const headURL = n => "https://mc-heads.net/avatar/" + encodeURIComponent(n) + "/96";
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+
+/* ---------- particles ---------- */
+(function(){
+  const p = $("particles");
+  for(let i=0;i<28;i++){
+    const s = document.createElement("span");
+    s.style.left = Math.random()*100+"%";
+    s.style.animationDuration = (9+Math.random()*14)+"s";
+    s.style.animationDelay = (-Math.random()*20)+"s";
+    const sz = 4+Math.random()*8; s.style.width = s.style.height = sz+"px";
+    p.appendChild(s);
+  }
+})();
+
+/* ---------- click sound (synthesized, no files) ---------- */
+let ac;
+function tone(freq, dur, type, vol, when){
+  try{
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const t = ac.currentTime + (when||0);
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type||"square"; o.frequency.setValueAtTime(freq, t);
+    o.frequency.exponentialRampToValueAtTime(freq*0.6, t+dur);
+    g.gain.setValueAtTime(vol||0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t+dur);
+  }catch(e){}
+}
+const sfx = {
+  click(){ tone(520,.08,"square",.07); tone(780,.06,"square",.04,.03); },
+  good(){ tone(660,.12,"triangle",.1); tone(990,.18,"triangle",.1,.1); },
+  bad(){ tone(180,.25,"sawtooth",.08); },
+  win(){ [523,659,784,1046].forEach((f,i)=>tone(f,.2,"triangle",.1,i*.12)); }
+};
+// sound on every click
+document.addEventListener("click", e => {
+  if(e.target.closest("button, .opt")) sfx.click();
+});
+
+/* ---------- view switching ---------- */
+let current = "v-login";
+function go(id){
+  const from = $(current), to = $(id);
+  if(from === to) return;
+  if(id === "v-creator"){ startMusic(); creatorEnter(); }
+  else if(current === "v-creator"){ stopMusic(); creatorLeave(); }
+  from.classList.add("out");
+  setTimeout(()=>{ from.classList.remove("active","out"); to.classList.add("active"); current = id; }, 240);
+}
+document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
+
+/* ---------- Minecraft head next to username ---------- */
+function bindHead(inputId, headId){
+  const inp = $(inputId), box = $(headId), img = box.querySelector("img");
+  let timer;
+  inp.addEventListener("input", () => {
+    clearTimeout(timer);
+    const name = inp.value.trim();
+    if(!/^[A-Za-z0-9_]{3,16}$/.test(name)){ box.classList.remove("show"); return; }
+    timer = setTimeout(() => {
+      img.onload = () => box.classList.add("show");
+      img.onerror = () => box.classList.remove("show");
+      img.src = headURL(name);
+    }, 350);
+  });
+}
+bindHead("lMc","lHead");
+bindHead("sMc","sHead");
+
+/* ---------- accounts (stored in this browser) ---------- */
+async function hash(s){
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+$("sBtn").addEventListener("click", async () => {
+  const mc = $("sMc").value.trim(), mail = $("sMail").value.trim().toLowerCase(), pw = $("sPass").value;
+  const err = $("sErr"); err.textContent = "";
+  if(!/^[A-Za-z0-9_]{3,16}$/.test(mc)) return err.textContent = "Enter a valid Minecraft username (3-16 letters, numbers, _).";
+  if(!/^[a-z0-9._%+-]+@gmail\.com$/.test(mail)) return err.textContent = "Please use a valid @gmail.com address.";
+  if(pw.length < 6) return err.textContent = "Password must be at least 6 characters.";
+  const users = store.get("vsmp_users", {});
+  if(users[mc.toLowerCase()]) return err.textContent = "That Minecraft name already has an account.";
+  if(Object.values(users).some(u => u.mail === mail)) return err.textContent = "That Gmail is already registered.";
+  users[mc.toLowerCase()] = { mc, mail, pw: await hash(pw) };
+  store.set("vsmp_users", users);
+  store.set("vsmp_session", mc.toLowerCase());
+  sfx.good(); enter();
+});
+$("lBtn").addEventListener("click", async () => {
+  const mc = $("lMc").value.trim(), pw = $("lPass").value, err = $("lErr"); err.textContent = "";
+  const users = store.get("vsmp_users", {}), u = users[mc.toLowerCase()];
+  if(!u || u.pw !== await hash(pw)){ sfx.bad(); return err.textContent = "Wrong username or password."; }
+  store.set("vsmp_session", mc.toLowerCase());
+  sfx.good(); enter();
+});
+$("logoutBtn").addEventListener("click", () => {
+  store.set("vsmp_session", null);
+  $("userbox").style.display = "none";
+  go("v-login");
+});
+function me(){
+  const s = store.get("vsmp_session", null);
+  return s ? store.get("vsmp_users", {})[s] : null;
+}
+function enter(){
+  const u = me(); if(!u) return;
+  $("uName").textContent = u.mc; $("uHead").src = headURL(u.mc);
+  $("userbox").style.display = "flex";
+  go("v-intro");
+}
+
+/* ---------- mace PvP quiz ---------- */
+const QUESTIONS = [
+  { q:"What does the Mace's smash attack depend on to deal extra damage?",
+    o:["How fast you swing","How far you fall before hitting","How much armor you wear","Your food level"], a:1,
+    e:"Smash damage scales with fall distance. The longer you fall before landing the hit, the more damage you deal." },
+  { q:"What is the standard way to gain height quickly for a mace smash in PvP?",
+    o:["Ender pearl","Wind charge","Elytra only","Ladder"], a:1,
+    e:"Wind charges launch you upward so you can drop on your target with a big smash attack." },
+  { q:"Which mace enchantment reduces the target's armor effectiveness?",
+    o:["Density","Wind Burst","Breach","Sharpness"], a:2,
+    e:"Breach lowers the effect of the target's armor, making it great against fully armored players." },
+  { q:"What does the Density enchantment do?",
+    o:["Increases smash damage per block fallen","Launches you into the air","Gives knockback","Repairs the mace"], a:0,
+    e:"Density adds extra damage for each block you fall during a smash attack." },
+  { q:"What does the Wind Burst enchantment do?",
+    o:["Slows the target","Launches you back up after a smash attack","Blocks projectiles","Sets the target on fire"], a:1,
+    e:"Wind Burst creates a wind blast on a smash hit that launches you upward again, enabling repeated combos." },
+  { q:"What is a common way to counter an incoming mace smash?",
+    o:["Crouch and wait","Use a shield or hit the attacker mid-air","Jump into water","Eat a golden apple only"], a:1,
+    e:"Blocking with a shield or striking the attacker out of the air disrupts the smash. A shield can also be disabled by axes, so timing matters." },
+  { q:"If you hit with a mace without falling enough, how does it behave?",
+    o:["It deals no damage at all","It acts like a normal, fairly weak melee weapon","It instantly breaks","It deals double damage"], a:1,
+    e:"Without the fall distance, the mace is just a slow melee weapon, so the smash is the whole point." },
+  { q:"In spear + mace combos, what is the usual role of the spear?",
+    o:["Replace the mace's enchantments","Poke and control spacing before or after the smash","Gain fall distance","Heal the user"], a:1,
+    e:"The spear gives reach and spacing control, setting up or following the mace smash. Check your server's version rules for exact spear mechanics." },
+  { q:"Which item negates fall damage when you land a smash on the ground?",
+    o:["The smash attack itself on a hit","Slow falling only","Fire resistance","Night vision"], a:0,
+    e:"Landing a successful smash hit negates your fall damage, which is why the mace is so safe when it connects." },
+  { q:"What is a good habit when fighting mace users?",
+    o:["Stand still in the open","Stay mobile, watch for wind charge launches and keep a shield ready","Only fight with no armor","Never look up"], a:1,
+    e:"Stay unpredictable, watch the sky and bursts of wind, and be ready to block or counter." }
+];
+let qi = 0, score = 0, locked = false;
+
+function showQuestion(){
+  const Q = QUESTIONS[qi]; locked = false;
+  $("qNum").textContent = "Question " + (qi+1) + " / " + QUESTIONS.length;
+  $("qScore").textContent = "Score: " + score;
+  $("bar").style.width = (qi/QUESTIONS.length*100) + "%";
+  $("qText").textContent = Q.q;
+  $("explain").style.display = "none";
+  $("nextBtn").style.display = "none";
+  $("opts").innerHTML = "";
+  Q.o.forEach((t,i) => {
+    const b = document.createElement("button");
+    b.className = "opt"; b.textContent = t;
+    b.addEventListener("click", () => answer(i, b));
+    $("opts").appendChild(b);
+  });
+}
+function answer(i, btn){
+  if(locked) return; locked = true;
+  const Q = QUESTIONS[qi], all = [...$("opts").children];
+  all.forEach(b => b.disabled = true);
+  all[Q.a].classList.add("correct");
+  if(i === Q.a){ score++; sfx.good(); } else { btn.classList.add("wrong"); sfx.bad(); }
+  $("qScore").textContent = "Score: " + score;
+  $("explain").textContent = Q.e; $("explain").style.display = "block";
+  $("nextBtn").style.display = "block";
+  $("nextBtn").textContent = qi === QUESTIONS.length-1 ? "SEE RESULT" : "NEXT";
+  $("bar").style.width = ((qi+1)/QUESTIONS.length*100) + "%";
+}
+$("startBtn").addEventListener("click", () => { qi = 0; score = 0; showQuestion(); go("v-quiz"); });
+$("nextBtn").addEventListener("click", () => {
+  if(qi < QUESTIONS.length-1){ qi++; showQuestion(); }
+  else finish();
+});
+function finish(){
+  const u = me();
+  $("rHead").src = headURL(u.mc);
+  $("rName").textContent = u.mc;
+  $("rNm").href = "https://namemc.com/profile/" + encodeURIComponent(u.mc);
+  $("rScore").textContent = score + "/" + QUESTIONS.length;
+  const T = tierFor(score);
+  $("rTier").textContent = T.name;
+  $("rTierDesc").textContent = T.desc;
+  $("rMsg").textContent = score>=7 ? "Impressive. You know your mace techniques." : "Keep practicing. Review the explanations and try again.";
+  const res = store.get("vsmp_results", {}); res[u.mc.toLowerCase()] = { score, tier: T.name, at: Date.now() };
+  store.set("vsmp_results", res);
+  sfx.win(); go("v-result");
+}
+function tierFor(s){
+  if(s >= 10) return { name:"TIER 1", desc:"Mace God. Flawless knowledge." };
+  if(s >= 8)  return { name:"TIER 2", desc:"Mace Master. You know the meta." };
+  if(s >= 6)  return { name:"TIER 3", desc:"Smash Specialist. Solid fundamentals." };
+  if(s >= 4)  return { name:"TIER 4", desc:"Apprentice. Learning the smash." };
+  return { name:"TIER 5", desc:"Rookie. Time to train." };
+}
+$("retryBtn").addEventListener("click", () => { qi = 0; score = 0; showQuestion(); go("v-quiz"); });
+
+/* ---------- creator page music (synthesized ambient loop) ---------- */
+const music = { on:false, muted:false, vol:0.5, timer:null, step:0, master:null };
+// chord roots (Am - F - C - G) with arpeggio notes
+const CHORDS = [
+  { pad:[220.00,261.63,329.63], arp:[440.00,523.25,659.25,523.25] },
+  { pad:[174.61,220.00,261.63], arp:[349.23,440.00,523.25,440.00] },
+  { pad:[261.63,329.63,392.00], arp:[523.25,659.25,784.00,659.25] },
+  { pad:[196.00,246.94,293.66], arp:[392.00,493.88,587.33,493.88] }
+];
+function note(freq, dur, type, vol, delay){
+  const t = ac.currentTime + (delay||0);
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + Math.min(.15, dur/3));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(music.master); o.start(t); o.stop(t + dur + .05);
+}
+function startMusic(){
+  try{
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if(ac.state === "suspended") ac.resume();
+    if(music.on) return;
+    music.on = true; music.step = 0;
+    music.master = ac.createGain();
+    music.master.gain.value = music.muted ? 0 : music.vol;
+    music.master.connect(ac.destination);
+    const tick = () => {
+      const s = music.step, chord = CHORDS[Math.floor(s/8) % CHORDS.length];
+      if(s % 8 === 0) chord.pad.forEach(f => note(f/2, 3.8, "sine", .09));
+      note(chord.arp[s % 4], .9, "triangle", .07);
+      music.step++;
+    };
+    tick(); music.timer = setInterval(tick, 480);
+    $("eq").classList.toggle("muted", music.muted);
+  }catch(e){}
+}
+function stopMusic(){
+  if(!music.on) return;
+  music.on = false; clearInterval(music.timer);
+  try{
+    const m = music.master;
+    m.gain.setValueAtTime(m.gain.value, ac.currentTime);
+    m.gain.linearRampToValueAtTime(0, ac.currentTime + .4);
+    setTimeout(() => { try{ m.disconnect(); }catch(e){} }, 600);
+  }catch(e){}
+}
+/* ---------- creator page interactions ---------- */
+const ROLES = ["Website Creator","Web Developer","Vengeance SMP Community"];
+let roleTimer, rI = 0, cI = 0, del = false;
+function typeTick(){
+  const word = ROLES[rI];
+  if(!del){
+    cI++;
+    $("roleText").textContent = word.slice(0,cI);
+    if(cI >= word.length){ del = true; roleTimer = setTimeout(typeTick,1500); return; }
+    roleTimer = setTimeout(typeTick,80);
+  } else {
+    cI--;
+    $("roleText").textContent = word.slice(0,cI);
+    if(cI <= 0){ del = false; rI = (rI+1) % ROLES.length; roleTimer = setTimeout(typeTick,300); return; }
+    roleTimer = setTimeout(typeTick,40);
+  }
+}
+function burst(x, y, n, sym){
+  n = n || 14;
+  for(let i=0;i<n;i++){
+    const d = document.createElement("div"); d.className = "sp";
+    const a = Math.random()*Math.PI*2, r = 40 + Math.random()*100;
+    d.style.left = x+"px"; d.style.top = y+"px";
+    d.style.setProperty("--dx", Math.cos(a)*r+"px");
+    d.style.setProperty("--dy", Math.sin(a)*r+"px");
+    if(sym){ d.textContent = sym; d.style.background = "none"; d.style.boxShadow = "none"; d.style.width = d.style.height = "auto"; d.style.fontSize = "18px"; }
+    document.body.appendChild(d); setTimeout(() => d.remove(), 900);
+  }
+}
+function countUp(){
+  document.querySelectorAll("#v-creator .stat b").forEach(el => {
+    const target = +el.dataset.count, t0 = performance.now();
+    (function step(t){
+      const k = Math.min(1,(t-t0)/900);
+      el.textContent = Math.round(target * (1 - Math.pow(1-k,3)));
+      if(k < 1) requestAnimationFrame(step);
+    })(t0);
+  });
+}
+function showTab(id){
+  document.querySelectorAll("#tabs .tab").forEach(t => t.classList.toggle("active", t.dataset.tab === id));
+  document.querySelectorAll("#v-creator .panel").forEach(p => p.classList.toggle("active", p.id === id));
+}
+function creatorEnter(){
+  clearTimeout(roleTimer); rI = 0; cI = 0; del = false; $("roleText").textContent = ""; typeTick();
+  countUp(); showTab("p-story");
+  $("loveN").textContent = store.get("vsmp_love", 0);
+  const done = store.get("vsmp_goals", []);
+  document.querySelectorAll(".goal").forEach(g => g.classList.toggle("done", done.includes(+g.dataset.i)));
+  updateGoals();
+}
+function creatorLeave(){ clearTimeout(roleTimer); }
+
+// glow follows the mouse + sparkle on every click inside the card
+$("cCard").addEventListener("mousemove", e => {
+  const r = $("cCard").getBoundingClientRect();
+  $("cCard").style.setProperty("--mx", (e.clientX - r.left) + "px");
+  $("cCard").style.setProperty("--my", (e.clientY - r.top) + "px");
+});
+$("cCard").addEventListener("click", e => burst(e.clientX, e.clientY, 8));
+
+// tabs
+document.querySelectorAll("#tabs .tab").forEach(t => t.addEventListener("click", () => showTab(t.dataset.tab)));
+
+// badge
+$("badge").addEventListener("click", e => {
+  const b = $("badge"); b.classList.remove("spin"); void b.offsetWidth; b.classList.add("spin");
+  const r = b.getBoundingClientRect();
+  burst(r.left + r.width/2, r.top + r.height/2, 28);
+  sfx.win(); toast("You found the badge! &#128154;");
+});
+
+// timeline steps (one open at a time)
+document.querySelectorAll(".step").forEach(st => st.addEventListener("click", () => {
+  const was = st.classList.contains("open");
+  document.querySelectorAll(".step").forEach(x => x.classList.remove("open"));
+  if(!was) st.classList.add("open");
+}));
+
+// why chips
+document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+  document.querySelectorAll(".chip").forEach(x => x.classList.remove("active"));
+  c.classList.add("active");
+  const box = $("whyBox"); box.textContent = c.dataset.text;
+  box.classList.remove("swap"); void box.offsetWidth; box.classList.add("swap");
+}));
+
+// goals
+function updateGoals(){
+  const all = document.querySelectorAll(".goal"), n = document.querySelectorAll(".goal.done").length;
+  $("gBar").style.width = (n / all.length * 100) + "%";
+  $("gTxt").textContent = n === all.length ? "All goals checked! Let's go!" : n + " / " + all.length + " goals checked";
+}
+document.querySelectorAll(".goal").forEach(g => g.addEventListener("click", () => {
+  g.classList.toggle("done");
+  const done = [...document.querySelectorAll(".goal.done")].map(x => +x.dataset.i);
+  store.set("vsmp_goals", done);
+  updateGoals();
+  const r = g.getBoundingClientRect();
+  if(g.classList.contains("done")){
+    burst(r.left + 30, r.top + r.height/2, 14);
+    if(done.length === document.querySelectorAll(".goal").length){
+      sfx.win(); burst(innerWidth/2, innerHeight/2, 50, "💚");
+    }
+  }
+}));
+
+// love button
+$("loveBtn").addEventListener("click", () => {
+  const n = store.get("vsmp_love", 0) + 1; store.set("vsmp_love", n);
+  $("loveN").textContent = n; sfx.good();
+  const r = $("loveBtn").getBoundingClientRect();
+  burst(r.left + r.width/2, r.top, 10, "💚");
+});
+
+// copy IP from this page too
+$("ipBtn2").addEventListener("click", () => $("playBtn").click());
+
+// navigation + music controls
+$("creatorBtn").addEventListener("click", () => go("v-creator"));
+$("backBtn").addEventListener("click", () => go("v-result"));
+$("muteBtn").addEventListener("click", () => {
+  music.muted = !music.muted;
+  if(music.master) music.master.gain.value = music.muted ? 0 : music.vol;
+  $("muteBtn").textContent = music.muted ? "UNMUTE" : "MUTE";
+  $("eq").classList.toggle("muted", music.muted);
+});
+$("vol").addEventListener("input", e => {
+  music.vol = e.target.value / 100;
+  if(music.muted && music.vol > 0){ music.muted = false; $("muteBtn").textContent = "MUTE"; $("eq").classList.remove("muted"); }
+  if(music.master) music.master.gain.value = music.vol;
+});
+
+/* ---------- copy server IP ---------- */
+const SERVER_IP = "vengeancesmp.gomc.me";
+let toastTimer;
+function toast(html){
+  const t = $("toast"); t.innerHTML = html; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2800);
+}
+$("playBtn").addEventListener("click", async () => {
+  let ok = false;
+  try{ await navigator.clipboard.writeText(SERVER_IP); ok = true; }catch(e){}
+  if(!ok){
+    try{
+      const ta = document.createElement("textarea");
+      ta.value = SERVER_IP; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); ok = document.execCommand("copy"); ta.remove();
+    }catch(e){}
+  }
+  if(ok){ sfx.good(); toast("Server IP copied: <b>" + SERVER_IP + "</b>"); }
+  else { sfx.bad(); toast("Copy failed. IP: <b>" + SERVER_IP + "</b>"); }
+});
+
+/* ---------- restore session ---------- */
+if(me()){ $("v-login").classList.remove("active"); $("v-intro").classList.add("active"); current = "v-intro"; enter(); }
+</script>
+</body>
+</html>
